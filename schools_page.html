@@ -1,0 +1,199 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+
+        "http://www.w3.org/TR/html4/loose.dtd">
+
+
+
+<html lang="en">
+
+
+
+<head>
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
+
+	<script src="d3.js" charset="utf-8"></script>
+<script src="//d3js.org/topojson.v1.min.js"></script>
+<script src="jquery.svg.pan.zoom.js"></script>
+
+
+
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+	<title>Inequality in California's Education System</title>
+<style>
+
+
+.land {
+	fill: #E9E0DB;
+}
+.exterior-boundary {
+	fill: none;
+	stroke: black;
+	stroke-linejoin: round;
+	stroke-width: 2px;
+}
+div.tooltip {
+	position: absolute;
+	text-align: center;
+	width: 75px;
+	padding: 2px;
+	font: 12px sans-serif;
+	color: white;
+	background: black;
+	border: 0px;
+	border-radius: 8px;
+	pointer-events: none;
+}
+</style>
+
+
+</head>
+
+
+
+<body>
+
+<div id = "map"></div>
+
+
+</body>
+<script type="text/javascript">
+
+var width = 1000,
+		height = 1100;
+var projection = d3.geo.mercator().scale(2000 * 2)
+			.center([-120, 36])
+			.translate([width/2, height/2]);;	
+	//console.log(projection(1,2))
+	// var projection = d3.geo.albersUsa() //works but tried another method above
+	// 	.scale(2500)
+	// 	.translate([1000, 360]);
+
+	var path = d3.geo.path()
+		.projection(projection);
+
+	var svg = d3.select("#map").append("svg")
+		.attr("width", width)
+		.attr("height", height);
+	d3.json("caCountiesTopo.json", function(error, ca){
+		//console.log(ca.objects.caCounties); //for navigating the data in the console
+		svg.append("path")
+			.datum(topojson.feature(ca, ca.objects.counties))
+			.attr("class", "land")
+			.attr("d", path);
+		//bind feature data to the map
+		// svg.selectAll(".subunit")
+		// 	  .data(topojson.feature(ca, ca.objects.subunits).features)
+		// 	.enter().append("path")
+		// 	.attr("class", function(d) { return "subunit " + d.properties.name; })
+		// 	.attr("d", path)
+		// 	.on("mouseover", function(d){ //tooltip
+		// 		div.transition()
+		// 			.duration(200)
+		// 			.style("opacity", .9);
+		// 		div.html(d.properties.fullName)
+		// 			.style("left", (d3.event.pageX) + 10 + "px")
+		// 			.style("top", (d3.event.pageY - 30) + "px"); 
+		// 	})
+		// 	.on("mouseout", function(d) { 
+		// 		div.transition()
+		// 			.duration(500)
+		// 			.style("opacity", 0.0);
+		// 	});
+		//exterior border
+		svg.append("path")
+			.datum(ca)//, ca.objects.subunits, function(a, b) { return a === b;}))
+			.attr("d", path)
+			.attr("class", "exterior-boundary");
+		
+		var data;
+		d3.json("locations.json", function(error, json) {
+		  if (error) return console.warn(error);
+		  data = new Array()
+		  console.log(json);
+		  for (k in json) {
+		       //console.log(data[k])
+		       data.push(json[k]);
+		    }
+		  visualize(data);
+		});
+
+
+
+		
+	
+		//tooltop declaration
+		var div = d3.select("#map").append("div")
+			.attr("class", "tooltip")
+			.style("opacity", 0);
+	});
+
+var color = d3.scale.linear()
+    .domain([500,800,970])
+    .range(["red", "yellow", "green"]);
+	var visualize = function(data) {
+		svg
+		.selectAll("circle")
+	    .data(data)
+		  .enter().
+		  	append("svg:circle")
+		    	.attr("cy", function(d) {x = [d[1],d[0]]; return projection(x)[1];} )
+		    	.attr("cx", function(d, i) {x = [d[1],d[0]]; return projection(x)[0]; })
+		    	.attr("r", function(d) {return Math.sqrt(d[3])/30})
+		    	.attr("opacity", function(d) {
+		    		if (d[2] < 600) {
+		    			return .9;
+		    		} else if (d[2] < 750) {
+		    			return .8;
+		    		} else {
+		    			return .75
+		    		}
+		    	}).on("mouseover", function(d) {      
+		            div.transition()        
+		                .duration(200)      
+		                .style("opacity", .9);      
+		            div .html(function(d) {return d[4];})  
+		                .style("left", (d3.event.pageX) + "px")     
+		                .style("top", (d3.event.pageY - 28) + "px");    
+		            })                  
+			        .on("mouseout", function(d) {       
+			            div.transition()        
+			                .duration(500)      
+			                .style("opacity", 0);   
+			        })
+		    	.attr("fill", function(d,i) {
+		    		return color(d[2])
+		    		// if (d[2] < 600) {
+		    		// 	dreturn "red";
+		    		// } 
+		    		// else if (d[2] < 800) {
+		    		// 	return "yellow";
+		    		// }
+		    		// else {
+		    		// 	return "green";
+		    		// }
+		    	})
+		    	.attr("zIndex", function(d) {
+		    		if (d[2] < 750) {
+		    			return 100;
+		    		} else {
+		    			return 10;
+		    		}
+		    	})
+		    	.append("svg:title")
+	  			 .text(function(d) { console.log(d[4]); return d[4]; })
+	  			 ;
+	}
+
+	$("svg").svgPanZoom({
+
+	});
+
+
+</script>
+
+
+</html>
+
+
